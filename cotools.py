@@ -1,77 +1,134 @@
+"""
+cotools is a collection of functional programming primitives utilizing the
+cooperative multitasking facilities provided by the Twisted framework.
+"""
+
 from twisted.internet.task import coiterate
 from twisted.internet.defer import maybeDeferred, succeed
 
-def coforeach(function, iterator, _coiterate=coiterate):
-    def _do_foreach(iterator):
+
+class _CoFunCaller(object):
+    def __init__(self, function=None, stopFunction=None, resultCollector=None):
+        self._function = function
+        self._stopFunction = stopFunction
+        self._resultCollector = resultCollector
+        self._stopped = False
+
+    def _maybeStop(self, result):
+        if self._stopFunction(result):
+            self._stopped = True
+
+    def do(self, iterator):
         for item in iterator:
             d = maybeDeferred(lambda: item)
-            d.addCallback(lambda i: function(i))
+            if self._function is not None:
+                d.addCallback(self._function)
+
+            if self._resultCollector is not None:
+                d.addCallback(self._resultCollector)
+
+            if self._stopFunction is not None:
+                d.addCallback(self._maybeStop)
 
             yield d
 
-    return _coiterate(_do_foreach(iterator))
+            if self._stopped:
+                return
+
+    def coiterate(self, iterator):
+        return coiterate(self.do(iterator))
 
 
-def cosum(iterator, _coiterate=coiterate):
-    return cofoldl(lambda a, b: a + b, 0, iterator, _coiterate=coiterate)
+def coforeach(function, iterator):
+    """
+    Apply function to each item in iterator.
+    """
+    return _CoFunCaller(function=function).coiterate(iterator)
 
 
-def cofilter(function, iterator, _coiterate=coiterate):
+def cofilter(function, iterator):
+    """
+    Return items in iterator for which `function(item)` returns True.
+    """
     results = []
 
-    def _filterResult(item):
-        def _checkFilter(res, item):
-            if res == True:
-                results.append(item)
+    def checkFilter(notfiltered, item):
+        if notfiltered == True:
+            results.append(item)
 
+    def dofilter(item):
         d = maybeDeferred(function, item)
-        d.addCallback(_checkFilter, item)
+        d.addCallback(checkFilter, item)
         return d
 
-    def _do_filter(iterator):
-        for item in iterator:
-            d = maybeDeferred(lambda: item)
-            d.addCallback(_filterResult)
-            yield d
+    d = _CoFunCaller(resultCollector=dofilter).coiterate(iterator)
+    d.addCallback(lambda _: results)
+    return d
 
-    return _coiterate(_do_filter(iterator)).addCallback(lambda _: results)
 
-def comap(function, iterator, _coiterate=coiterate):
+def comap(function, iterator):
+    """
+    Applies function to each item in iterator returning a list of the return
+    values of `function(item)`.
+    """
+    results = []
+    cfc = _CoFunCaller(function, resultCollector=results.append)
+    d = cfc.coiterate(iterator)
+    d.addCallback(lambda _: results)
+    return d
+
+
+def cofold(function, initial, iterator):
+    """
+    Calls `function(accumulator, item)` for each item in iterator using the
+    return value as the accumulator for the next item. `cofold` will return
+    the last accumulator.
+    """
+    acc = [initial]
+
+    def handleAcc(newAcc):
+        acc[0] = newAcc
+
+    def dofold(item):
+        return function(acc[0], item)
+
+    d = _CoFunCaller(dofold, resultCollector=handleAcc).coiterate(iterator)
+    d.addCallback(lambda _: acc[0])
+    return d
+
+
+def cosum(iterator):
+    """
+    Sum all the items in iterator.  Implemented as
+    `cofold(lambda a, b: a + b, 0, iterator)`.
+    More of a toy than a useful primitive.
+    """
+    return cofold(lambda a, b: a + b, 0, iterator)
+
+
+def cotakewhile(function, iterator):
+    """
+    Take items found in iterator and return them until an item is found where
+    `function(item)` does not return true.
+    """
     results = []
 
-    def _do_map(iterator):
-        for item in iterator:
-            d = maybeDeferred(lambda: item)
-            d.addCallback(lambda i: function(i))
-            d.addCallback(results.append)
-            yield d
+    def checkTake(shouldTake, item):
+        if shouldTake == True:
+            results.append(item)
+            return item
 
-    return _coiterate(_do_map(iterator)).addCallback(lambda _: results)
+    def dotake(item):
+        d = maybeDeferred(function, item)
+        d.addCallback(checkTake, item)
+        return d
 
+    def dostop(takeResult):
+        return takeResult is None
 
-class _CoFolder(object):
-    def __init__(self, function, initial, iterator):
-        self._iterator = iterator
-        self._function = function
-        self._acc = initial
+    cfc = _CoFunCaller(resultCollector=dotake, stopFunction=dostop)
+    return cfc.coiterate(iterator).addCallback(lambda _: results)
 
-    def getAcc(self):
-        return self._acc
-
-    def _setAcc(self, acc):
-        self._acc = acc
-
-    def dofold(self):
-        for item in self._iterator:
-            d = maybeDeferred(lambda: item)
-            d.addCallback(lambda b: self._function(self._acc, b))
-            d.addCallback(self._setAcc)
-            yield d
-
-
-def cofoldl(function, initial, iterator, _coiterate=coiterate):
-    folder = _CoFolder(function, initial, iterator)
-    return _coiterate(folder.dofold()).addCallback(lambda _: folder.getAcc())
 
 #
 # Unit tests
@@ -107,29 +164,29 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
-    def test_cofoldl(self):
+    def test_cofold(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
 
-        d = cofoldl(lambda a, b: a + b, 0, [0, 1, 2, 3, 4, 5])
+        d = cofold(lambda a, b: a + b, 0, [0, 1, 2, 3, 4, 5])
         d.addCallback(_checkResult)
 
         return d
 
-    def test_cofoldl_deferred(self):
+    def test_cofold_deferred(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
 
-        d = cofoldl(lambda a, b: a + b, 0, [succeed(10), succeed(5)])
+        d = cofold(lambda a, b: a + b, 0, [succeed(10), succeed(5)])
         d.addCallback(_checkResult)
 
         return d
 
-    def test_cofoldl_deferred_function(self):
+    def test_cofold_deferred_function(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
 
-        d = cofoldl(lambda a, b: succeed(a + b), 0, [10, 5])
+        d = cofold(lambda a, b: succeed(a + b), 0, [10, 5])
         d.addCallback(_checkResult)
 
         return d
@@ -209,6 +266,33 @@ class CotoolsTests(unittest.TestCase):
             self.assertEquals(result, [2])
 
         d = cofilter(lambda x: succeed(x % 2 == 0), [1, 2])
+        d.addCallback(_checkResult)
+
+        return d
+
+    def test_cotakewhile(self):
+        def _checkResult(result):
+            self.assertEqual(result, [0, 1, 2, 3, 4])
+
+        d = cotakewhile(lambda x: x < 5, [0, 1, 2, 3, 4, 5])
+        d.addCallback(_checkResult)
+
+        return d
+
+    def test_cotakewhile_deferred(self):
+        def _checkResult(result):
+            self.assertEquals(result, [1])
+
+        d = cotakewhile(lambda x: x < 2, [succeed(1), succeed(2)])
+        d.addCallback(_checkResult)
+
+        return d
+
+    def test_cotakewhile_deferred_function(self):
+        def _checkResult(result):
+            self.assertEquals(result, [1])
+
+        d = cofilter(lambda x: succeed(x < 2), [1, 2])
         d.addCallback(_checkResult)
 
         return d
