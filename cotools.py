@@ -14,9 +14,11 @@ class _CoFunCaller(object):
         self._resultCollector = resultCollector
         self._stopped = False
 
+
     def _maybeStop(self, result):
         if self._stopFunction(result):
             self._stopped = True
+
 
     def do(self, iterator):
         for item in iterator:
@@ -35,8 +37,10 @@ class _CoFunCaller(object):
             if self._stopped:
                 return
 
+
     def coiterate(self, iterator):
         return coiterate(self.do(iterator))
+
 
 
 def coforeach(function, iterator):
@@ -44,6 +48,7 @@ def coforeach(function, iterator):
     Apply function to each item in iterator.
     """
     return _CoFunCaller(function=function).coiterate(iterator)
+
 
 
 def cofilter(function, iterator):
@@ -66,6 +71,7 @@ def cofilter(function, iterator):
     return d
 
 
+
 def comap(function, iterator):
     """
     Applies function to each item in iterator returning a list of the return
@@ -76,6 +82,7 @@ def comap(function, iterator):
     d = cfc.coiterate(iterator)
     d.addCallback(lambda _: results)
     return d
+
 
 
 def cofold(function, initial, iterator):
@@ -97,6 +104,7 @@ def cofold(function, initial, iterator):
     return d
 
 
+
 def cosum(iterator):
     """
     Sum all the items in iterator.  Implemented as
@@ -104,6 +112,7 @@ def cosum(iterator):
     More of a toy than a useful primitive.
     """
     return cofold(lambda a, b: a + b, 0, iterator)
+
 
 
 def cotakewhile(function, iterator):
@@ -130,6 +139,7 @@ def cotakewhile(function, iterator):
     return cfc.coiterate(iterator).addCallback(lambda _: results)
 
 
+
 #
 # Unit tests
 #
@@ -146,6 +156,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_comap_deferred(self):
         def _checkResult(result):
             self.assertEquals(result, [2, 4])
@@ -154,6 +165,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_comap_deferred_function(self):
         def _checkResult(result):
@@ -164,6 +176,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cofold(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
@@ -172,6 +185,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_cofold_deferred(self):
         def _checkResult(result):
@@ -182,6 +196,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cofold_deferred_function(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
@@ -191,6 +206,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cosum(self):
         def _checkResult(result):
             self.assertEquals(result, 15)
@@ -198,6 +214,8 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
+
 
     def test_coforeach(self):
         results = []
@@ -212,6 +230,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_coforeach_deferred(self):
         results = []
@@ -243,6 +262,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cofilter(self):
         def _checkResult(result):
             self.assertEquals(result, [0, 2, 4, 6, 8, 10])
@@ -251,6 +271,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_cofilter_deferred(self):
         def _checkResult(result):
@@ -261,6 +282,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cofilter_deferred_function(self):
         def _checkResult(result):
             self.assertEquals(result, [2])
@@ -269,6 +291,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_cotakewhile(self):
         def _checkResult(result):
@@ -279,6 +302,7 @@ class CotoolsTests(unittest.TestCase):
 
         return d
 
+
     def test_cotakewhile_deferred(self):
         def _checkResult(result):
             self.assertEquals(result, [1])
@@ -287,6 +311,7 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
+
 
     def test_cotakewhile_deferred_function(self):
         def _checkResult(result):
