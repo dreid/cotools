@@ -39,7 +39,9 @@ class _CoFunCaller(object):
 
 
     def coiterate(self, iterator):
-        return coiterate(self.do(iterator))
+        d = maybeDeferred(lambda: iterator)
+        d.addCallback(lambda i: coiterate(self.do(i)))
+        return d
 
 
 
@@ -147,6 +149,16 @@ def cotakewhile(function, iterator):
 from twisted.trial import unittest
 
 class CotoolsTests(unittest.TestCase):
+    def test_comap_deferred_iterator(self):
+        def _checkResult(result):
+            self.assertEquals(result, [0, 2, 4, 6, 8, 10])
+
+        d = comap(lambda x: x * 2, succeed([0, 1, 2, 3, 4, 5]))
+        d.addCallback(_checkResult)
+
+        return d
+
+
     def test_comap(self):
         def _checkResult(result):
             self.assertEquals(result, [0, 2, 4, 6, 8, 10])
@@ -214,7 +226,6 @@ class CotoolsTests(unittest.TestCase):
         d.addCallback(_checkResult)
 
         return d
-
 
 
     def test_coforeach(self):
@@ -318,6 +329,16 @@ class CotoolsTests(unittest.TestCase):
             self.assertEquals(result, [1])
 
         d = cofilter(lambda x: succeed(x < 2), [1, 2])
+        d.addCallback(_checkResult)
+
+        return d
+
+
+    def test_cosum_comap(self):
+        def _checkResult(result):
+            self.assertEquals(result, 30)
+
+        d = cosum(comap(lambda x: x * 2, [0, 1, 2, 3, 4, 5]))
         d.addCallback(_checkResult)
 
         return d

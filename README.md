@@ -9,8 +9,9 @@ cooperatively scheduling computation than those discussed in my talk
 where I discuss how to break up and schedule work using `reactor.callLater`
 and `twisted.internet.task.coiterate`.  The primitives provided by cotools
 utilize `twisted.internet.task.coiterate` and also attempt to be fully
-`Deferred` aware.  Meaning that `Deferred`s are valid values in iterators and
-valid return values of the functions passed to them.
+`Deferred` aware.  Meaning that `Deferred`s are valid values as iterators,
+in iterators, and as return values of the functions to be applied to the
+items in the iterators.
 
 I admit that these examples are rather contrived and the implementation
 though having significant test coverage may not be optimal or performant.
@@ -53,4 +54,11 @@ noted.
     d = comap(double, xrange(0, 5))
     d.addCallback(printr)
 
-The above would print [0, 2, 4, 6, 8].
+The above would print `[0, 2, 4, 6, 8]`.
+
+    d = cosum(comap(double, xrange(0, 5)))
+    d.addCallback(printr)
+
+This would print `20`
+
+
