@@ -44,7 +44,7 @@ noted.
 
 
 ## Examples
-
+```python
     def printr(r):
         print r
 
@@ -53,11 +53,14 @@ noted.
 
     d = comap(double, xrange(0, 5))
     d.addCallback(printr)
+```
 
 The above would print `[0, 2, 4, 6, 8]`.
 
+```python
     d = cosum(comap(double, xrange(0, 5)))
     d.addCallback(printr)
+```
 
 This would print `20`
 
