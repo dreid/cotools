@@ -18,12 +18,14 @@ My goal is more to facilitate discussion about how to make Cooperative
 Multitasking a more comfortable programming paradigm and to attempt to give
 novice Twisted users some level of cooperation 'for free'.
 
+
 ## Non-blocking vs Cooperative
 
 These primitives much like the `Deferred` they are built on do not magically
 make your code non-blocking.  The primary unit of work is the item in the
 iterator and whatever function does with that item may block your
 application for any period of time.
+
 
 ## Primitives
 

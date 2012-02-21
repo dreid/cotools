@@ -4,6 +4,6 @@ setup(
     name="cotools",
     version="0.0.1",
     description="Cooperative functional primitives for Twisted",
-    modules=["cotools"],
+    py_modules=["cotools"],
     install_requires=["Twisted"]
 )
