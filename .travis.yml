@@ -1,8 +1,7 @@
 language: python
-before_script:
-    - virtualenv cotools_env
-    - source cotools_env/bin/activate
+python:
+    - 2.6
+    - 2.7
 
-script:
-    - python setup.py install
-    - trial cotools
+install: python setup.py install
+script: trial cotools
