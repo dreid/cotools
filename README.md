@@ -1,5 +1,7 @@
 # cotools
 
+[![Build Status](https://secure.travis-ci.org/dreid/cotools.png?branch=master)](http://travis-ci.org/dreid/cotools)
+
 cotools is a collection of functional programming primitives that make use of
 the cooperative multitasking facilities found in Twisted.
 
